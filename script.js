@@ -44,3 +44,189 @@ const sectionObserver = new IntersectionObserver((entries) => {
 }, { rootMargin: '-40% 0px -55% 0px' });
 
 sections.forEach(section => sectionObserver.observe(section));
+
+// New York skyline: skyscrapers in two rows, windows that switch on and off,
+// and now and then someone walking past a lit window.
+const cityBack = document.getElementById('city-back');
+const cityFront = document.getElementById('city-front');
+const windowLayer = document.getElementById('windows');
+const walkerLayer = document.getElementById('walkers');
+
+if (cityBack && cityFront && windowLayer && walkerLayer) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const make = (tag, attrs, parent) => {
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(el);
+    return el;
+  };
+
+  // Seeded random, so the skyline is the same on every visit
+  let seed = 1932;
+  const rand = (a = 0, b = 1) => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return a + (((t ^ (t >>> 14)) >>> 0) / 4294967296) * (b - a);
+  };
+  const pick = list => list[Math.floor(rand(0, list.length))];
+
+  const GROUND = 196, FLOOR = 6, COL = 4.6, WIN_W = 2.8, WIN_H = 3.4;
+
+  // A building is a stack of tiers, each narrower than the one below (NY setbacks),
+  // plus whatever sits on the roof
+  function building(x, w, h, kind) {
+    const tiers = [{ x0: x, x1: x + w, top: GROUND - h }];
+    const extras = [];
+    const add = (inset, rise) => {
+      const below = tiers[tiers.length - 1];
+      tiers.push({ x0: below.x0 + inset, x1: below.x1 - inset, top: below.top - rise });
+    };
+    const top = () => tiers[tiers.length - 1];
+    const mid = () => (top().x0 + top().x1) / 2;
+
+    if (kind === 'setback') {
+      const steps = Math.floor(rand(1, 4));
+      for (let i = 0; i < steps && top().x1 - top().x0 > 12; i++) add(w * rand(0.1, 0.16), rand(10, 22));
+    } else if (kind === 'empire') {
+      add(w * 0.12, 26); add(w * 0.14, 34); add(w * 0.16, 8); add(w * 0.12, 6);
+      extras.push(['rect', { x: mid() - 1, y: top().top - 10, width: 2, height: 10 }]);
+      extras.push(['rect', { x: mid() - 0.3, y: top().top - 24, width: 0.6, height: 14 }]);
+    } else if (kind === 'chrysler') {
+      add(w * 0.14, 30); add(w * 0.12, 14);
+      // stepped arches narrowing to a needle
+      let x0 = top().x0, x1 = top().x1, y = top().top;
+      for (let i = 0; i < 5; i++) {
+        const inset = (x1 - x0) * 0.16;
+        extras.push(['path', { d: `M${x0} ${y}Q${(x0 + x1) / 2} ${y - 9} ${x1} ${y}Z` }]);
+        x0 += inset; x1 -= inset; y -= 4.5;
+      }
+      extras.push(['path', { d: `M${mid() - 0.6} ${y + 2}L${mid()} ${y - 16}L${mid() + 0.6} ${y + 2}Z` }]);
+    } else if (kind === 'slant') {
+      const t = top();
+      extras.push(['path', { d: `M${t.x0} ${t.top}L${t.x1} ${t.top}L${t.x1} ${t.top - (t.x1 - t.x0) * 0.6}Z` }]);
+    } else if (kind === 'antenna') {
+      add(w * 0.2, rand(6, 12));
+      extras.push(['rect', { x: mid() - 0.35, y: top().top - 18, width: 0.7, height: 18 }]);
+    } else if (kind === 'tower') {
+      // a classic rooftop water tank on legs
+      const tx = top().x0 + rand(3, Math.max(4, w - 10));
+      extras.push(['path', { d: `M${tx} ${top().top}L${tx + 1} ${top().top - 3}L${tx + 5} ${top().top - 3}L${tx + 6} ${top().top}Z` }]);
+      extras.push(['path', { d: `M${tx + 0.6} ${top().top - 3}V${top().top - 8}L${tx + 3} ${top().top - 10}L${tx + 5.4} ${top().top - 8}V${top().top - 3}Z` }]);
+    }
+    return { tiers, extras };
+  }
+
+  function draw(b, parent) {
+    b.tiers.forEach(t => make('rect', { x: t.x0, y: t.top, width: t.x1 - t.x0, height: GROUND - t.top + 1 }, parent));
+    b.extras.forEach(([tag, attrs]) => make(tag, attrs, parent));
+  }
+
+  // Window slots for one building: rows of floors in each tier, between its roof and the tier below
+  function slots(b) {
+    const rows = [];
+    b.tiers.forEach((t, i) => {
+      const floorTo = i === 0 ? GROUND - 4 : b.tiers[i - 1].top;
+      const cols = Math.floor((t.x1 - t.x0 - 2) / COL);
+      if (cols < 1) return;
+      const left = t.x0 + (t.x1 - t.x0 - cols * COL) / 2 + (COL - WIN_W) / 2;
+      for (let y = t.top + 3; y + WIN_H <= floorTo - 1; y += FLOOR) {
+        rows.push({ y, x0: t.x0, x1: t.x1, lights: [], xs: Array.from({ length: cols }, (_, c) => left + c * COL) });
+      }
+    });
+    return rows;
+  }
+
+  // Lay out a row of buildings across the 880-wide view
+  function street(minW, maxW, height, kinds, gap) {
+    const list = [];
+    let x = -6;
+    while (x < 886) {
+      const w = rand(minW, maxW);
+      const centre = 1 - Math.abs(x + w / 2 - 440) / 440;
+      list.push({ x, w, h: height(centre), kind: pick(kinds) });
+      x += w + gap();
+    }
+    return list;
+  }
+
+  const back = street(20, 34, c => rand(70, 105) + c * rand(10, 45),
+    ['setback', 'setback', 'antenna', 'slant', 'plain'], () => rand(-4, 2));
+  const front = street(24, 40, c => rand(28, 70) + c * rand(10, 50),
+    ['plain', 'setback', 'tower', 'tower', 'setback', 'plain'], () => rand(0, 3));
+
+  // Two landmarks in the front row: an Empire State and a Chrysler
+  const nearest = (list, at) => list.reduce((a, b) => Math.abs(b.x + b.w / 2 - at) < Math.abs(a.x + a.w / 2 - at) ? b : a);
+  Object.assign(nearest(front, 330), { kind: 'empire', h: 96, w: 40 });
+  Object.assign(nearest(front, 570), { kind: 'chrysler', h: 86, w: 30 });
+
+  const lights = [];   // every window that can light up: { el, on }
+  const litRows = [];  // front-row floors where someone can walk past
+
+  function light(row, parent, share, chance) {
+    row.xs.forEach(x => {
+      if (rand() > share) return;   // some offices simply have no lights
+      const on = rand() < chance;
+      const el = make('rect', { x: x.toFixed(2), y: row.y.toFixed(2), width: WIN_W, height: WIN_H, class: on ? 'lit' : '' }, parent);
+      const w = { el, on };
+      lights.push(w);
+      row.lights.push(w);
+    });
+  }
+
+  const backWindows = make('g', { class: 'windows windows--back' }, cityBack);
+  back.forEach(spec => {
+    const b = building(spec.x, spec.w, spec.h, spec.kind);
+    draw(b, cityBack);
+    cityBack.appendChild(backWindows);   // keep the back windows above the back buildings
+    slots(b).forEach(row => light(row, backWindows, 0.45, 0.5));
+  });
+
+  front.forEach(spec => {
+    const b = building(spec.x, spec.w, spec.h, spec.kind);
+    draw(b, cityFront);
+    slots(b).forEach(row => {
+      light(row, windowLayer, 0.7, 0.55);
+      litRows.push(row);
+    });
+  });
+
+  const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (!calm) {
+    // Every so often a few lights switch on or off
+    setInterval(() => {
+      const flips = Math.floor(Math.random() * 3);
+      for (let i = 0; i < flips; i++) {
+        const w = lights[Math.floor(Math.random() * lights.length)];
+        w.on = !w.on;
+        w.el.classList.toggle('lit', w.on);
+      }
+    }, 700);
+
+    // Someone walks along a floor, switching its lights on as they go in. They're
+    // drawn in the building's colour, so you only see them passing lit windows.
+    const walk = () => {
+      const row = litRows[Math.floor(Math.random() * litRows.length)];
+      row.lights.forEach(w => { w.on = true; w.el.classList.add('lit'); });
+      const person = make('g', { class: 'walker' }, walkerLayer);
+      make('circle', { cx: 0, cy: 1, r: 0.7 }, person);
+      make('path', { d: 'M-0.8 1.9Q0 1.6 0.8 1.9L1 5H-1Z' }, person);
+      const right = Math.random() < 0.5;
+      const from = right ? row.x0 : row.x1, to = right ? row.x1 : row.x0;
+      const speed = 3 + Math.random() * 2;   // view units per second
+      const start = performance.now();
+      const step = now => {
+        const t = (now - start) / 1000 * speed / Math.abs(to - from);
+        if (t >= 1) { person.remove(); return; }
+        const x = from + (to - from) * t;
+        const bob = Math.abs(Math.sin(t * Math.abs(to - from) * 1.6)) * 0.15;
+        person.setAttribute('transform', `translate(${x.toFixed(2)} ${(row.y - bob).toFixed(2)})`);
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+      setTimeout(walk, 1500 + Math.random() * 3500);
+    };
+    setTimeout(walk, 1200);
+  }
+}
