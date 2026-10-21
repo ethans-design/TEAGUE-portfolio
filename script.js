@@ -204,8 +204,8 @@ if (cityBack && cityFront && windowLayer && walkerLayer) {
     }
   }, 100);
 
-  // Someone walks along an office floor: a strip of light comes on, a dark figure
-  // walks the length of it, then the light goes off behind them
+  // Someone walks along a floor: its windows light up and a dark figure passes
+  // behind each one in turn (they're the wall's colour, so only show in the glass)
   const walkRows = litRows.filter(row => row.x1 - row.x0 >= 22 && row.y < GROUND - 12);
   const walking = new Set();
 
@@ -215,18 +215,12 @@ if (cityBack && cityFront && windowLayer && walkerLayer) {
     if (!row) return;
     walking.add(row);
 
-    const floor = make('g', { class: 'office' }, walkerLayer);
-    const band = make('rect', {
-      x: (row.x0 + 1).toFixed(2), y: (row.y - 1.2).toFixed(2),
-      width: (row.x1 - row.x0 - 2).toFixed(2), height: WIN_H + 2.4, class: 'office-light'
-    }, floor);
-    const person = make('g', { class: 'walker' }, floor);
+    row.lights.forEach(w => { w.on = true; w.el.classList.add('lit'); });
+    const person = make('g', { class: 'walker' }, walkerLayer);
     make('circle', { cx: 0, cy: 0.1, r: 0.65 }, person);
     make('path', { d: 'M-0.75 0.85Q0 0.6 0.75 0.85L0.65 2.6H-0.65Z' }, person);
     const legA = make('line', { class: 'walker-leg' }, person);
     const legB = make('line', { class: 'walker-leg' }, person);
-
-    requestAnimationFrame(() => band.classList.add('on'));
 
     const right = Math.random() < 0.5;
     const from = right ? row.x0 + 1.5 : row.x1 - 1.5, to = right ? row.x1 - 1.5 : row.x0 + 1.5;
@@ -239,15 +233,14 @@ if (cityBack && cityFront && windowLayer && walkerLayer) {
       const t = Math.max(0, (now - start) / 1000 * speed / dist);
       if (t >= 1) {
         person.remove();
-        band.classList.remove('on');
-        setTimeout(() => { floor.remove(); walking.delete(row); }, 900);
+        walking.delete(row);
         return;
       }
       const x = from + (to - from) * t;
       const swing = Math.sin(t * dist * 2.2) * 0.5;
       legA.setAttribute('x1', 0); legA.setAttribute('y1', 2.5); legA.setAttribute('x2', swing); legA.setAttribute('y2', 4.1);
       legB.setAttribute('x1', 0); legB.setAttribute('y1', 2.5); legB.setAttribute('x2', -swing); legB.setAttribute('y2', 4.1);
-      person.setAttribute('transform', `translate(${x.toFixed(2)} ${(row.y - 0.5).toFixed(2)}) scale(${right ? 1.3 : -1.3} 1.3)`);
+      person.setAttribute('transform', `translate(${x.toFixed(2)} ${(row.y + 0.75).toFixed(2)}) scale(${right ? 1 : -1} 1)`);
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
