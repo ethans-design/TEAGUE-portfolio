@@ -192,17 +192,17 @@ if (cityBack && cityFront && windowLayer && walkerLayer) {
   });
 
   // The city is always live: lights keep switching and people keep walking
-  // Every quarter second a light or two somewhere switches on or off
+  // Every tenth of a second a few lights somewhere switch on or off
   const frontLights = lights.filter(w => w.el.parentNode === windowLayer);
   setInterval(() => {
-    const flips = 1 + Math.floor(Math.random() * 3);
+    const flips = 2 + Math.floor(Math.random() * 4);
     for (let i = 0; i < flips; i++) {
       const pool = Math.random() < 0.8 ? frontLights : lights;
       const w = pool[Math.floor(Math.random() * pool.length)];
       w.on = !w.on;
       w.el.classList.toggle('lit', w.on);
     }
-  }, 250);
+  }, 100);
 
   // Someone walks along an office floor: a strip of light comes on, a dark figure
   // walks the length of it, then the light goes off behind them
@@ -253,10 +253,10 @@ if (cityBack && cityFront && windowLayer && walkerLayer) {
     requestAnimationFrame(step);
   };
 
-  // A few people are usually on the move at once
+  // Plenty of people are on the move at once
   const keepWalking = () => {
-    if (walking.size < 3) walk();
-    setTimeout(keepWalking, 1200 + Math.random() * 2000);
+    if (walking.size < 8) walk();
+    setTimeout(keepWalking, 300 + Math.random() * 600);
   };
   keepWalking();
 }
