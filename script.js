@@ -191,42 +191,72 @@ if (cityBack && cityFront && windowLayer && walkerLayer) {
     });
   });
 
-  const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // The city is always live: lights keep switching and people keep walking
+  // Every quarter second a light or two somewhere switches on or off
+  const frontLights = lights.filter(w => w.el.parentNode === windowLayer);
+  setInterval(() => {
+    const flips = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < flips; i++) {
+      const pool = Math.random() < 0.8 ? frontLights : lights;
+      const w = pool[Math.floor(Math.random() * pool.length)];
+      w.on = !w.on;
+      w.el.classList.toggle('lit', w.on);
+    }
+  }, 250);
 
-  if (!calm) {
-    // Every so often a few lights switch on or off
-    setInterval(() => {
-      const flips = Math.floor(Math.random() * 3);
-      for (let i = 0; i < flips; i++) {
-        const w = lights[Math.floor(Math.random() * lights.length)];
-        w.on = !w.on;
-        w.el.classList.toggle('lit', w.on);
+  // Someone walks along an office floor: a strip of light comes on, a dark figure
+  // walks the length of it, then the light goes off behind them
+  const walkRows = litRows.filter(row => row.x1 - row.x0 >= 22 && row.y < GROUND - 12);
+  const walking = new Set();
+
+  const walk = () => {
+    const free = walkRows.filter(row => !walking.has(row));
+    const row = free[Math.floor(Math.random() * free.length)];
+    if (!row) return;
+    walking.add(row);
+
+    const floor = make('g', { class: 'office' }, walkerLayer);
+    const band = make('rect', {
+      x: (row.x0 + 1).toFixed(2), y: (row.y - 1.2).toFixed(2),
+      width: (row.x1 - row.x0 - 2).toFixed(2), height: WIN_H + 2.4, class: 'office-light'
+    }, floor);
+    const person = make('g', { class: 'walker' }, floor);
+    make('circle', { cx: 0, cy: 0.1, r: 0.65 }, person);
+    make('path', { d: 'M-0.75 0.85Q0 0.6 0.75 0.85L0.65 2.6H-0.65Z' }, person);
+    const legA = make('line', { class: 'walker-leg' }, person);
+    const legB = make('line', { class: 'walker-leg' }, person);
+
+    requestAnimationFrame(() => band.classList.add('on'));
+
+    const right = Math.random() < 0.5;
+    const from = right ? row.x0 + 1.5 : row.x1 - 1.5, to = right ? row.x1 - 1.5 : row.x0 + 1.5;
+    const dist = Math.abs(to - from);
+    const speed = 4 + Math.random() * 2;   // view units per second
+    const delay = 600;                     // let the lights come up first
+    const start = performance.now() + delay;
+
+    const step = now => {
+      const t = Math.max(0, (now - start) / 1000 * speed / dist);
+      if (t >= 1) {
+        person.remove();
+        band.classList.remove('on');
+        setTimeout(() => { floor.remove(); walking.delete(row); }, 900);
+        return;
       }
-    }, 700);
-
-    // Someone walks along a floor, switching its lights on as they go in. They're
-    // drawn in the building's colour, so you only see them passing lit windows.
-    const walk = () => {
-      const row = litRows[Math.floor(Math.random() * litRows.length)];
-      row.lights.forEach(w => { w.on = true; w.el.classList.add('lit'); });
-      const person = make('g', { class: 'walker' }, walkerLayer);
-      make('circle', { cx: 0, cy: 1, r: 0.7 }, person);
-      make('path', { d: 'M-0.8 1.9Q0 1.6 0.8 1.9L1 5H-1Z' }, person);
-      const right = Math.random() < 0.5;
-      const from = right ? row.x0 : row.x1, to = right ? row.x1 : row.x0;
-      const speed = 3 + Math.random() * 2;   // view units per second
-      const start = performance.now();
-      const step = now => {
-        const t = (now - start) / 1000 * speed / Math.abs(to - from);
-        if (t >= 1) { person.remove(); return; }
-        const x = from + (to - from) * t;
-        const bob = Math.abs(Math.sin(t * Math.abs(to - from) * 1.6)) * 0.15;
-        person.setAttribute('transform', `translate(${x.toFixed(2)} ${(row.y - bob).toFixed(2)})`);
-        requestAnimationFrame(step);
-      };
+      const x = from + (to - from) * t;
+      const swing = Math.sin(t * dist * 2.2) * 0.5;
+      legA.setAttribute('x1', 0); legA.setAttribute('y1', 2.5); legA.setAttribute('x2', swing); legA.setAttribute('y2', 4.1);
+      legB.setAttribute('x1', 0); legB.setAttribute('y1', 2.5); legB.setAttribute('x2', -swing); legB.setAttribute('y2', 4.1);
+      person.setAttribute('transform', `translate(${x.toFixed(2)} ${(row.y - 0.5).toFixed(2)}) scale(${right ? 1.3 : -1.3} 1.3)`);
       requestAnimationFrame(step);
-      setTimeout(walk, 1500 + Math.random() * 3500);
     };
-    setTimeout(walk, 1200);
-  }
+    requestAnimationFrame(step);
+  };
+
+  // A few people are usually on the move at once
+  const keepWalking = () => {
+    if (walking.size < 3) walk();
+    setTimeout(keepWalking, 1200 + Math.random() * 2000);
+  };
+  keepWalking();
 }
