@@ -25,7 +25,7 @@
 <body id="top">
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <!-- Header: slate-to-taupe sky behind a skyline of building massings -->
+  <!-- Header: slate-to-taupe sky behind a New York skyline (drawn and lit by script.js) -->
   <header class="site-header">
     <div class="header-inner">
       <a class="brand" href="#top" aria-label="Teague Roark, back to top">
@@ -39,7 +39,11 @@
       </nav>
     </div>
     <svg class="skyline" viewBox="0 0 880 196" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      <path class="skyline-front" d="M0 196 L0 170 L0 176 L26 176 L26 153 L34 153 L34 137 L36 137 L36 153 L44 153 L44 160 L52 160 L52 144 L54 144 L54 160 L62 160 L62 163 L68 163 L68 151 L86 151 L86 163 L92 163 L92 160 L128 160 L128 164 L146 164 L146 160 L161 146 L176 160 L176 148 L228 148 L228 141 L264 141 L264 150 L308 150 L308 119 L330 105 L352 119 L352 149 L396 149 L396 83 L426 83 L426 77 L440 77 L440 61 L442 61 L442 77 L456 77 L456 108 L478 108 L478 120 L500 120 L500 87 L512 87 L512 71 L514 71 L514 87 L526 87 L526 105 L544 105 L544 138 L596 138 L596 158 L626 158 L626 120 L643 120 L643 104 L645 104 L645 120 L662 120 L662 120 L688 120 L688 164 L718 164 L718 148 L733 134 L748 148 L748 152 L754 152 L754 140 L786 140 L786 152 L792 152 L792 149 L807 135 L822 149 L822 167 L852 167 L852 180 L880 180 L880 196 Z" />
+      <!-- back row, front row, then the lit windows and the people walking past them -->
+      <g class="city-back" id="city-back"></g>
+      <g class="city-front" id="city-front"></g>
+      <g class="windows" id="windows"></g>
+      <g class="walkers" id="walkers"></g>
     </svg>
   </header>
 

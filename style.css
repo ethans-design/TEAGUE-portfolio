@@ -21,6 +21,10 @@
   --sky-low: #8b8589;
   --sky-horizon: #b9b0a7;
 
+  /* City */
+  --city-back: #464b50;
+  --window: #f2dca8;
+
   --max: 1180px;
 }
 
@@ -101,7 +105,20 @@ h1 {
   aspect-ratio: 880 / 196;
 }
 
-.skyline-front { fill: var(--bg); }
+.city-front,
+.walker { fill: var(--bg); }
+
+.city-back { fill: var(--city-back); }
+
+/* Window lights fade on and off; the back row is dimmer */
+.windows rect {
+  fill: var(--window);
+  opacity: 0;
+  transition: opacity 0.8s;
+}
+
+.windows rect.lit { opacity: 0.85; }
+.windows--back rect.lit { opacity: 0.35; }
 
 .header-inner {
   position: relative;
