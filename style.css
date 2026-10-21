@@ -114,11 +114,26 @@ h1 {
 .windows rect {
   fill: var(--window);
   opacity: 0;
-  transition: opacity 0.8s;
+  transition: opacity 0.4s;
 }
 
 .windows rect.lit { opacity: 0.85; }
 .windows--back rect.lit { opacity: 0.35; }
+
+/* An office floor lighting up for someone to walk through */
+.office-light {
+  fill: var(--window);
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+
+.office-light.on { opacity: 0.9; }
+
+.walker-leg {
+  stroke: var(--bg);
+  stroke-width: 0.5;
+  stroke-linecap: round;
+}
 
 .header-inner {
   position: relative;
@@ -520,7 +535,7 @@ section + section {
     scroll-behavior: auto;
   }
 
-  *,
+  *:not(.windows rect):not(.office-light),
   *::before,
   *::after {
     transition: none !important;
