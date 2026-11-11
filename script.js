@@ -13,20 +13,18 @@ document.querySelectorAll('.nav-link').forEach(link => {
   });
 });
 
-// Project filters: pick a category, pick it again to show everything
-const filters = document.querySelectorAll('.filter');
-const cards = document.querySelectorAll('.project-card');
-
-filters.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const on = btn.getAttribute('aria-pressed') !== 'true';
-    filters.forEach(b => b.setAttribute('aria-pressed', 'false'));
-    btn.setAttribute('aria-pressed', String(on));
-    cards.forEach(card => {
-      card.hidden = on && card.dataset.category !== btn.dataset.filter;
+// Light up the category button for the block currently in view
+const jumps = document.querySelectorAll('.jump');
+const categoryObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    jumps.forEach(jump => {
+      jump.classList.toggle('active', jump.getAttribute('href') === '#' + entry.target.id);
     });
   });
-});
+}, { rootMargin: '-30% 0px -60% 0px' });
+
+document.querySelectorAll('.category').forEach(c => categoryObserver.observe(c));
 
 // Highlight the nav link for the section currently in view
 const navLinks = document.querySelectorAll('.nav-link');
