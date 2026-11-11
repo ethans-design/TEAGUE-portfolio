@@ -251,42 +251,64 @@ section + section {
   margin-top: 16px;
 }
 
-/* Projects */
-.section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-bottom: 36px;
+/* Projects: a sticky row of category buttons, then one block per category */
+#projects > h1 {
+  margin-bottom: 20px;
 }
 
-.filters {
+.jump-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
-  gap: 22px;
   flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 0;
+  margin-bottom: 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
 }
 
-.filter {
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 2px 0;
-  font: inherit;
+.jump {
   font-weight: 800;
   font-size: 0.9rem;
   text-transform: lowercase;
+  text-decoration: none;
   color: var(--text);
-  transition: color 0.2s, border-color 0.2s;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 16px;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
 
-.filter:hover {
-  color: var(--slate);
+.jump:hover {
+  color: #fff;
+  border-color: var(--slate);
 }
 
-.filter[aria-pressed="true"] {
-  color: var(--slate);
-  border-bottom-color: var(--slate);
+.jump.active {
+  color: var(--bg);
+  background: var(--slate);
+  border-color: var(--slate);
+}
+
+.category {
+  padding-top: 48px;
+  scroll-margin-top: 30px;
+}
+
+.category h2 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-transform: lowercase;
+  color: #fff;
+}
+
+.category-sub {
+  margin: 6px 0 24px;
+  font-size: 0.92rem;
+  color: var(--muted);
 }
 
 .projects-grid {
@@ -296,15 +318,13 @@ section + section {
 }
 
 .project-card {
+  display: block;
+  text-decoration: none;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 10px;
   overflow: hidden;
   transition: transform 0.25s, border-color 0.25s, background 0.25s;
-}
-
-.project-card[hidden] {
-  display: none;
 }
 
 .project-card:hover {
@@ -507,6 +527,24 @@ section + section {
 
   .projects-grid {
     grid-template-columns: 1fr;
+  }
+
+  .jump-bar {
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+
+  .jump {
+    flex: none;
+  }
+
+  .jump {
+    padding: 7px 12px;
+    font-size: 0.85rem;
   }
 
   .footer-inner {
